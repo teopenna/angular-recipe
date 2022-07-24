@@ -1,7 +1,9 @@
-import { Component } from '@angular/core';
+import { Component, ViewChild } from '@angular/core';
 import { NgForm } from '@angular/forms';
 import { Router } from '@angular/router';
-import { Observable } from 'rxjs';
+import { Observable, Subscription } from 'rxjs';
+import { AlertComponent } from '../shared/alert/alert/alert.component';
+import { PlaceholderDirective } from '../shared/placeholder/placeholder.directive';
 import { AuthService, IAuthResponseData } from './auth.service';
 
 @Component({
@@ -12,6 +14,10 @@ export class AuthComponent {
   isLoginMode = true;
   isLoading = false;
   error: string | null = null;
+  @ViewChild(PlaceholderDirective, { static: false })
+  alertHost: PlaceholderDirective;
+
+  private closeSubject = new Subscription();
 
   constructor(private authService: AuthService, private router: Router) {}
 
@@ -43,6 +49,7 @@ export class AuthComponent {
       },
       error: (errorMessage) => {
         this.error = errorMessage.message;
+        this.onShowError(errorMessage);
         console.log(errorMessage);
         this.isLoading = false;
       },
@@ -54,5 +61,19 @@ export class AuthComponent {
 
   onHandleError() {
     this.error = null;
+  }
+
+  onShowError(message: string) {
+    const hostViewContainerRef = this.alertHost.viewContainerRef;
+    hostViewContainerRef.clear();
+
+    const componentRef = hostViewContainerRef.createComponent(AlertComponent);
+
+    componentRef.instance.message = message;
+
+    this.closeSubject = componentRef.instance.close.subscribe(() => {
+      this.closeSubject.unsubscribe();
+      hostViewContainerRef.clear();
+    });
   }
 }
